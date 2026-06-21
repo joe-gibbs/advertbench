@@ -20,7 +20,35 @@ class GenerationHarnessError(RuntimeError):
         self.turns = turns
 
 
-async def generate_run(prompt: str, log: Callable[[str], None] | None = None) -> str:
+def completed_model_slugs_for_prompt(prompt: str, model_slugs: list[str], required_assets: int) -> set[str]:
+    if not model_slugs:
+        return set()
+    with connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT DISTINCT m.slug
+            FROM output_sets os
+            JOIN models m ON m.id = os.model_id
+            WHERE os.status = 'completed'
+              AND os.prompt = %s
+              AND m.slug = ANY(%s::text[])
+              AND (
+                SELECT count(*)
+                FROM ad_assets aa
+                WHERE aa.output_set_id = os.id
+              ) >= %s
+            """,
+            (prompt, model_slugs, required_assets),
+        ).fetchall()
+    return {row["slug"] for row in rows}
+
+
+async def generate_run(
+    prompt: str,
+    log: Callable[[str], None] | None = None,
+    model_slugs: list[str] | None = None,
+    skip_completed: bool = True,
+) -> str | None:
     settings = get_settings()
     config = sync_models_from_config()
     mode = "openrouter-e2b-agent"
@@ -29,6 +57,30 @@ async def generate_run(prompt: str, log: Callable[[str], None] | None = None) ->
         raise RuntimeError("OPENROUTER_API_KEY is not configured")
     if not settings.e2b_api_key:
         raise RuntimeError("E2B_API_KEY is not configured")
+
+    configured_model_slugs = model_slugs or [model.slug for model in config.models]
+    with connection() as conn:
+        models = conn.execute(
+            """
+            SELECT id, slug, display_name, metadata
+            FROM models
+            WHERE slug = ANY(%s::text[])
+            ORDER BY array_position(%s::text[], slug)
+            """,
+            (configured_model_slugs, configured_model_slugs),
+        ).fetchall()
+
+    if skip_completed:
+        completed_slugs = completed_model_slugs_for_prompt(prompt, configured_model_slugs, len(config.ad_sizes))
+        if completed_slugs:
+            for model in models:
+                if model["slug"] in completed_slugs:
+                    _emit(log, f"model skip: {model['slug']} already completed for this ad")
+            models = [model for model in models if model["slug"] not in completed_slugs]
+
+    if not models:
+        _emit(log, "run skipped: all requested models are already completed for this ad")
+        return None
 
     with connection() as conn:
         row = conn.execute(
@@ -49,19 +101,8 @@ async def generate_run(prompt: str, log: Callable[[str], None] | None = None) ->
         "requested_sizes": [size.model_dump() for size in config.ad_sizes],
         "models": [],
     }
-    _emit(log, f"run {run_id} started: {len(config.models)} models, {len(config.ad_sizes)} sizes")
+    _emit(log, f"run {run_id} started: {len(models)} models, {len(config.ad_sizes)} sizes")
     _write_generation_log(run_id, run_log)
-
-    with connection() as conn:
-        models = conn.execute(
-            """
-            SELECT id, slug, display_name, metadata
-            FROM models
-            WHERE slug = ANY(%s::text[])
-            ORDER BY slug
-            """,
-            ([model.slug for model in config.models],),
-        ).fetchall()
 
     try:
         failures = []

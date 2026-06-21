@@ -17,14 +17,17 @@ class E2BAgentSandbox:
         except ImportError as error:
             raise RuntimeError("Install e2b-code-interpreter to use E2B generation") from error
 
-        self._sandbox = Sandbox.create()
+        settings = get_settings()
+        self._command_timeout_seconds = settings.e2b_command_timeout_seconds
+        self._sandbox = Sandbox.create(timeout=settings.e2b_sandbox_timeout_seconds)
 
     def close(self) -> None:
         close = getattr(self._sandbox, "kill", None) or getattr(self._sandbox, "close", None)
         if close:
             close()
 
-    def run_bash(self, command: str, timeout_seconds: int = 180) -> dict:
+    def run_bash(self, command: str, timeout_seconds: int | None = None) -> dict:
+        timeout_seconds = timeout_seconds or self._command_timeout_seconds
         runner = f"""
 import json, subprocess
 cmd = {json.dumps(command)}

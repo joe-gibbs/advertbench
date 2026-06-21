@@ -24,6 +24,10 @@ services:
         sync: false
       - key: GENERATION_MAX_TURNS
         value: 100
+      - key: E2B_SANDBOX_TIMEOUT_SECONDS
+        value: 3600
+      - key: E2B_COMMAND_TIMEOUT_SECONDS
+        value: 300
     disk:
       name: advertbench-assets
       mountPath: /var/data

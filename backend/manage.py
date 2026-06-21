@@ -4,7 +4,7 @@ import asyncio
 from psycopg import connect
 
 from app.db import close_pool, connection, open_pool
-from app.generation import generate_run
+from app.generation import completed_model_slugs_for_prompt, generate_run
 from app.model_config import load_advert_config, sync_models_from_config
 from app.settings import ROOT_DIR, get_settings
 
@@ -44,21 +44,68 @@ def seed() -> None:
         close_pool()
 
 
+async def generate_one_ad(ad_key: str | None) -> None:
+    config = load_advert_config()
+    ads = config.ads
+    if ad_key:
+        ads = [ad for ad in config.ads if ad.key == ad_key]
+        if not ads:
+            available = ", ".join(ad.key for ad in config.ads)
+            raise RuntimeError(f"Unknown ad key '{ad_key}'. Available ads: {available}")
+
+    for ad in ads:
+        print(f"generating {ad.key}")
+        run_id = await generate_run(ad.render_prompt(), log=print)
+        if run_id:
+            print(f"generated {ad.key} run {run_id}")
+        else:
+            print(f"skipped {ad.key}: all models already completed")
+
+
+async def generate_round_robin() -> None:
+    config = load_advert_config()
+    required_assets = len(config.ad_sizes)
+    attempted: set[tuple[str, str]] = set()
+    completed_seen: set[tuple[str, str]] = set()
+    generated = 0
+
+    while True:
+        scheduled_this_round = 0
+        for model in config.models:
+            for ad in config.ads:
+                pair = (model.slug, ad.key)
+                if pair in attempted:
+                    continue
+
+                completed = completed_model_slugs_for_prompt(ad.render_prompt(), [model.slug], required_assets)
+                if model.slug in completed:
+                    completed_seen.add(pair)
+                    continue
+
+                attempted.add(pair)
+                scheduled_this_round += 1
+                print(f"generating {ad.key} with {model.slug}")
+                run_id = await generate_run(ad.render_prompt(), log=print, model_slugs=[model.slug])
+                if run_id:
+                    generated += 1
+                    print(f"generated {ad.key} with {model.slug} run {run_id}")
+                else:
+                    print(f"skipped {ad.key} with {model.slug}: already completed")
+                break
+
+        if scheduled_this_round == 0:
+            break
+
+    print(f"round-robin complete: runs_started={generated} already_completed={len(completed_seen)}")
+
+
 def generate(ad_key: str | None) -> None:
     open_pool()
     try:
-        config = load_advert_config()
-        ads = config.ads
         if ad_key:
-            ads = [ad for ad in config.ads if ad.key == ad_key]
-            if not ads:
-                available = ", ".join(ad.key for ad in config.ads)
-                raise RuntimeError(f"Unknown ad key '{ad_key}'. Available ads: {available}")
-
-        for ad in ads:
-            print(f"generating {ad.key}")
-            run_id = asyncio.run(generate_run(ad.render_prompt(), log=print))
-            print(f"generated {ad.key} run {run_id}")
+            asyncio.run(generate_one_ad(ad_key))
+        else:
+            asyncio.run(generate_round_robin())
     finally:
         close_pool()
 
