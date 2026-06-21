@@ -12,7 +12,7 @@ from .assets import asset_root
 from .comparisons import get_leaderboard, get_next_comparison, get_revealed_comparison, record_vote
 from .db import close_pool, open_pool
 from .settings import get_settings
-from .voter import attach_voter_cookie, request_identity
+from .voter import LAST_PAIR_COOKIE_NAME, attach_last_pair_cookie, attach_voter_cookie, request_identity
 from .settings import ROOT_DIR
 
 app = FastAPI(title="AdvertBench")
@@ -73,17 +73,22 @@ def vote_page(
     reveal = None
     if status == "saved" and revealWinnerSetId and revealLoserSetId:
         reveal = get_revealed_comparison(revealWinnerSetId, revealLoserSetId, str(identity["voter_hash"]))
-    return _template_response(
+    comparison = get_next_comparison(
+        str(identity["voter_hash"]),
+        exclude_pair_key=request.cookies.get(LAST_PAIR_COOKIE_NAME),
+    )
+    response = _template_response(
         request,
         "vote.html",
         {
-            "comparison": get_next_comparison(str(identity["voter_hash"])),
+            "comparison": comparison,
             "reveal": reveal,
             "status": status,
             "idempotency_key": str(uuid4()),
         },
         identity,
     )
+    return attach_last_pair_cookie(response, comparison.get("pairKey") if comparison else None)
 
 
 @app.post("/vote")
@@ -126,11 +131,16 @@ def about_page(request: Request) -> Response:
 @app.get("/api/comparisons")
 def comparisons(request: Request) -> Response:
     identity = request_identity(request)
+    comparison = get_next_comparison(
+        str(identity["voter_hash"]),
+        exclude_pair_key=request.cookies.get(LAST_PAIR_COOKIE_NAME),
+    )
     response = JSONResponse(
         {
-            "comparison": get_next_comparison(str(identity["voter_hash"])),
+            "comparison": comparison,
         }
     )
+    attach_last_pair_cookie(response, comparison.get("pairKey") if comparison else None)
     return attach_voter_cookie(response, str(identity["voter_id"]))
 
 
@@ -151,16 +161,18 @@ def votes(payload: VotePayload, request: Request) -> Response:
         user_agent_hash=str(identity["user_agent_hash"]),
     )
     status = 200 if result["accepted"] else 429 if result.get("reason") == "rate_limited" else 409
+    comparison = get_next_comparison(str(identity["voter_hash"])) if result["accepted"] else None
     response = JSONResponse(
         {
             "result": result,
             "reveal": get_revealed_comparison(payload.winnerSetId, payload.loserSetId, str(identity["voter_hash"]))
             if result["accepted"]
             else None,
-            "comparison": get_next_comparison(str(identity["voter_hash"])) if result["accepted"] else None,
+            "comparison": comparison,
         },
         status_code=status,
     )
+    attach_last_pair_cookie(response, comparison.get("pairKey") if comparison else None)
     return attach_voter_cookie(response, str(identity["voter_id"]))
 
 

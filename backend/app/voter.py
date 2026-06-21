@@ -7,6 +7,7 @@ from fastapi import Request, Response
 from .settings import get_settings
 
 COOKIE_NAME = "advertbench_voter"
+LAST_PAIR_COOKIE_NAME = "advertbench_last_pair"
 ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
 
 
@@ -35,6 +36,22 @@ def attach_voter_cookie(response: Response, voter_id: str) -> Response:
     response.set_cookie(
         COOKIE_NAME,
         voter_id,
+        max_age=ONE_YEAR_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+    )
+    return response
+
+
+def attach_last_pair_cookie(response: Response, pair_key: str | None) -> Response:
+    if not pair_key:
+        response.delete_cookie(LAST_PAIR_COOKIE_NAME, path="/")
+        return response
+    response.set_cookie(
+        LAST_PAIR_COOKIE_NAME,
+        pair_key,
         max_age=ONE_YEAR_SECONDS,
         httponly=True,
         samesite="lax",

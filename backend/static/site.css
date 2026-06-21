@@ -80,18 +80,6 @@ button:hover, .button:hover, .linkButton:hover {
   min-width: 220px;
 }
 
-.brandMark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 8px;
-  background: #151515;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .brand strong, .brand small { display: block; }
 .brand strong { font-size: 15px; line-height: 1.1; }
 .brand small { margin-top: 3px; color: var(--muted); font-size: 12px; }
@@ -139,6 +127,7 @@ button:hover, .button:hover, .linkButton:hover {
 }
 
 .pageIntro.split { align-items: center; }
+.pageIntro.compactIntro { justify-content: flex-end; padding: 18px; }
 .headerActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 
 .eyebrow {
@@ -168,18 +157,14 @@ p { color: var(--muted); line-height: 1.55; }
   color: var(--danger);
 }
 
-.notice.success {
-  border-color: rgba(15, 118, 110, 0.24);
-  background: #f0faf7;
-  color: var(--accent-hover);
-}
+.notice.success { display: none; }
 
 .revealPanel {
   margin-top: 20px;
-  border: 1px solid rgba(15, 118, 110, 0.28);
+  border: 1px solid rgba(15, 118, 110, 0.34);
   border-radius: 8px;
-  background: #f0faf7;
-  padding: 18px;
+  background: linear-gradient(180deg, #f0faf7 0%, #ffffff 100%);
+  padding: 22px;
   box-shadow: var(--shadow);
   animation: revealIn 420ms ease-out both;
 }
@@ -189,7 +174,9 @@ p { color: var(--muted); line-height: 1.55; }
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(15, 118, 110, 0.18);
 }
 
 .revealIntro span, .revealCard span {
@@ -206,14 +193,14 @@ p { color: var(--muted); line-height: 1.55; }
 .revealGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .revealCard {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(201, 193, 182, 0.9);
   border-radius: 8px;
   background: #fff;
-  padding: 16px;
+  padding: 18px;
   transform: translateY(8px);
   opacity: 0;
   animation: revealCardIn 360ms ease-out 140ms both;
@@ -222,8 +209,9 @@ p { color: var(--muted); line-height: 1.55; }
 .revealCard:nth-child(2) { animation-delay: 220ms; }
 
 .revealCard.winner {
-  border-color: rgba(15, 118, 110, 0.42);
-  box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.55);
+  background: #f8fffc;
+  box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.12);
 }
 
 .revealCard h2 { margin-top: 8px; }
@@ -249,6 +237,26 @@ p { color: var(--muted); line-height: 1.55; }
   background: #f2efe9;
   color: #1f1d1b;
   font-size: 13px;
+}
+
+.promptPanel {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+
+.promptPanel strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.promptPanel p {
+  max-width: 1100px;
 }
 
 .matchSummary {

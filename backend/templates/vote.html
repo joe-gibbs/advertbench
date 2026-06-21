@@ -4,21 +4,14 @@
 
 {% block content %}
   <main class="pageShell">
-    <header class="pageIntro split">
-      <div>
-        <p class="eyebrow">Pairwise review</p>
-        <h1>AdvertBench</h1>
-        <p>Choose the stronger complete ad set. Each vote updates the Elo ranking.</p>
-      </div>
+    <header class="pageIntro split compactIntro">
       <div class="headerActions">
         <a class="linkButton" href="/leaderboard">View leaderboard</a>
         <a class="button secondary" href="/">Refresh pair</a>
       </div>
     </header>
 
-    {% if status == "saved" %}
-      <div class="notice success">Vote saved.</div>
-    {% elif status %}
+    {% if status and status != "saved" %}
       <div class="notice">Vote was not accepted: {{ status }}.</div>
     {% endif %}
 
@@ -48,18 +41,11 @@
     {% else %}
       {% set sets = comparison.sets %}
       {% if comparison.ad %}
-        <section class="tablePanel" aria-label="Prompt for this comparison">
-          <strong>Prompt: {{ comparison.ad.key }}</strong>
+        <section class="promptPanel" aria-label="Prompt for this comparison">
+          <strong>Prompt</strong>
           <p>{{ comparison.ad.prompt }}</p>
         </section>
       {% endif %}
-      <section class="matchSummary" aria-label="Current comparison summary">
-        <div>
-          <span>Current match</span>
-          <strong>Set A vs Set B</strong>
-        </div>
-      </section>
-
       <section class="comparisonGrid" aria-label="Ad set comparison">
         {% for set in sets %}
           {% set other = sets[1] if loop.index0 == 0 else sets[0] %}
@@ -67,7 +53,6 @@
             <div class="setHeader">
               <div>
                 <h2>{{ set.label }}</h2>
-                <p>Choose based on the ads only. Model details are hidden until after voting.</p>
               </div>
               <form method="post" action="/vote">
                 <input type="hidden" name="winnerSetId" value="{{ set.id }}">

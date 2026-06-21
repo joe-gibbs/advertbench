@@ -93,7 +93,7 @@ def get_sets_by_ids(ids: list[str], *, reveal: bool = True) -> list[dict]:
     return [_shape_set(row, reveal=reveal, label=labels[index] if index < len(labels) else f"Set {index + 1}") for index, row in enumerate(rows)]
 
 
-def get_next_comparison(voter_hash: str) -> dict | None:
+def get_next_comparison(voter_hash: str, exclude_pair_key: str | None = None) -> dict | None:
     config = load_advert_config()
     configured_slugs = [model.slug for model in config.models]
     min_assets = len(config.ad_sizes)
@@ -110,7 +110,10 @@ def get_next_comparison(voter_hash: str) -> dict | None:
               GROUP BY os.id, os.prompt
               HAVING count(*) >= %s
             )
-            SELECT a.id AS a_id, b.id AS b_id
+            SELECT
+              a.id AS a_id,
+              b.id AS b_id,
+              concat(least(a.id::text, b.id::text), ':', greatest(a.id::text, b.id::text)) AS pair_key
             FROM ready_sets a
             JOIN ready_sets b ON a.id < b.id AND a.model_id <> b.model_id AND a.prompt = b.prompt
             WHERE NOT EXISTS (
@@ -119,10 +122,18 @@ def get_next_comparison(voter_hash: str) -> dict | None:
               WHERE v.voter_hash = %s
                 AND v.pair_key = concat(least(a.id::text, b.id::text), ':', greatest(a.id::text, b.id::text))
             )
-            ORDER BY abs(a.rating - b.rating), random()
+            ORDER BY
+              CASE
+                WHEN %s::text IS NOT NULL
+                 AND concat(least(a.id::text, b.id::text), ':', greatest(a.id::text, b.id::text)) = %s::text
+                THEN 1
+                ELSE 0
+              END,
+              abs(a.rating - b.rating),
+              random()
             LIMIT 1
             """,
-            (configured_slugs, min_assets, voter_hash),
+            (configured_slugs, min_assets, voter_hash, exclude_pair_key, exclude_pair_key),
         ).fetchone()
 
     if not row:
