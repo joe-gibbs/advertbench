@@ -31,4 +31,4 @@ services:
 
 databases:
   - name: advertbench-db
-    plan: starter
+    plan: basic-256mb
