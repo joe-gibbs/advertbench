@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from .assets import asset_root
-from .comparisons import get_leaderboard, get_next_comparison, record_vote
+from .comparisons import get_leaderboard, get_next_comparison, get_revealed_comparison, record_vote
 from .db import close_pool, open_pool
 from .settings import get_settings
 from .voter import attach_voter_cookie, request_identity
@@ -63,16 +63,22 @@ def _template_response(request: Request, template: str, context: dict, identity:
 
 
 @app.get("/", response_class=HTMLResponse)
-def vote_page(request: Request, status: str | None = None) -> Response:
+def vote_page(
+    request: Request,
+    status: str | None = None,
+    revealWinnerSetId: str | None = None,
+    revealLoserSetId: str | None = None,
+) -> Response:
     identity = request_identity(request)
-    leaderboard = get_leaderboard()
+    reveal = None
+    if status == "saved" and revealWinnerSetId and revealLoserSetId:
+        reveal = get_revealed_comparison(revealWinnerSetId, revealLoserSetId, str(identity["voter_hash"]))
     return _template_response(
         request,
         "vote.html",
         {
             "comparison": get_next_comparison(str(identity["voter_hash"])),
-            "leaderboard": leaderboard,
-            "total_votes": sum(row["matches"] for row in leaderboard) // 2,
+            "reveal": reveal,
             "status": status,
             "idempotency_key": str(uuid4()),
         },
@@ -97,7 +103,13 @@ def vote_form(
         user_agent_hash=str(identity["user_agent_hash"]),
     )
     status = "saved" if result["accepted"] else str(result.get("reason", "rejected"))
-    response = RedirectResponse(f"/?status={status}", status_code=303)
+    if result["accepted"]:
+        response = RedirectResponse(
+            f"/?status={status}&revealWinnerSetId={winnerSetId}&revealLoserSetId={loserSetId}",
+            status_code=303,
+        )
+    else:
+        response = RedirectResponse(f"/?status={status}", status_code=303)
     return attach_voter_cookie(response, str(identity["voter_id"]))
 
 
@@ -117,7 +129,6 @@ def comparisons(request: Request) -> Response:
     response = JSONResponse(
         {
             "comparison": get_next_comparison(str(identity["voter_hash"])),
-            "leaderboard": get_leaderboard(),
         }
     )
     return attach_voter_cookie(response, str(identity["voter_id"]))
@@ -143,8 +154,10 @@ def votes(payload: VotePayload, request: Request) -> Response:
     response = JSONResponse(
         {
             "result": result,
+            "reveal": get_revealed_comparison(payload.winnerSetId, payload.loserSetId, str(identity["voter_hash"]))
+            if result["accepted"]
+            else None,
             "comparison": get_next_comparison(str(identity["voter_hash"])) if result["accepted"] else None,
-            "leaderboard": get_leaderboard(),
         },
         status_code=status,
     )

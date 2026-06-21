@@ -10,6 +10,10 @@ from .settings import get_settings
 _MODEL_CAPABILITIES: dict[str, dict[str, Any]] | None = None
 
 
+class OpenRouterRequestError(RuntimeError):
+    pass
+
+
 def build_agent_messages(
     prompt: str,
     sizes: list[AdSize],
@@ -332,7 +336,7 @@ async def _post_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     if response.status_code >= 400:
-        raise RuntimeError(f"OpenRouter failed: {response.status_code} {response.text}")
+        raise OpenRouterRequestError(f"OpenRouter failed: {response.status_code} {response.text}")
     return response.json()
 
 

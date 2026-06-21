@@ -8,7 +8,7 @@ from .assets import save_asset
 from .db import connection, transaction
 from .e2b_agent import E2BAgentSandbox
 from .model_config import AdSize, config_as_json, sync_models_from_config
-from .openrouter import build_agent_messages, model_supports_images, model_supports_tools, request_agent_turn
+from .openrouter import OpenRouterRequestError, build_agent_messages, model_supports_images, model_supports_tools, request_agent_turn
 from .settings import get_settings
 
 MAX_MESSAGE_CHARS = 12000
@@ -251,10 +251,17 @@ async def generate_set(
             conn.execute(
                 """
                 UPDATE output_sets
-                SET status = 'completed', completed_at = now(), generation_ms = %s, generation_turns = %s
+                SET status = 'completed',
+                    completed_at = now(),
+                    generation_ms = %s,
+                    generation_turns = %s
                 WHERE id = %s
                 """,
-                (generation_ms, generation_turns, output_set_id),
+                (
+                    generation_ms,
+                    generation_turns,
+                    output_set_id,
+                ),
             )
         return {"output_set_id": output_set_id, "turns": generation_turns, "generation_ms": generation_ms}
     except Exception as error:
@@ -263,10 +270,17 @@ async def generate_set(
             conn.execute(
                 """
                 UPDATE output_sets
-                SET status = 'failed', error = %s, completed_at = now(), generation_turns = %s
+                SET status = 'failed',
+                    error = %s,
+                    completed_at = now(),
+                    generation_turns = %s
                 WHERE id = %s
                 """,
-                (str(error), generation_turns, output_set_id),
+                (
+                    str(error),
+                    generation_turns,
+                    output_set_id,
+                ),
             )
             conn.commit()
         raise
@@ -301,6 +315,7 @@ async def generate_ads_with_openrouter_e2b_agent(
 
     try:
         for turn in range(1, max_turns + 1):
+            _strip_prior_image_payloads(messages)
             try:
                 turn_result = await request_agent_turn(
                     model_slug,
@@ -309,6 +324,11 @@ async def generate_ads_with_openrouter_e2b_agent(
                     supports_images=supports_images,
                     model_settings=model_settings or {},
                 )
+            except OpenRouterRequestError as error:
+                _emit(log, f"{model_slug} turn {turn}: unrecoverable model request error: {error}")
+                if transcript is not None:
+                    transcript.append({"event": "model_request_error", "turn": turn, "error": str(error)})
+                raise GenerationHarnessError(f"Unrecoverable model request error: {error}", turn) from error
             except Exception as error:
                 result = {"ok": False, "error": f"invalid agent action: {error}"}
                 last_result = _compact_tool_result(result)
@@ -551,6 +571,23 @@ def _view_image_message(result: dict[str, Any], supports_images: bool) -> dict[s
             {"type": "image_url", "image_url": {"url": result["data_url"]}},
         ],
     }
+
+
+def _strip_prior_image_payloads(messages: list[dict[str, Any]]) -> None:
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        stripped = False
+        next_content = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "image_url":
+                stripped = True
+                continue
+            next_content.append(part)
+        if stripped:
+            next_content.append({"type": "text", "text": "[Previously viewed image payload omitted from subsequent turns.]"})
+            message["content"] = next_content
 
 
 def _compact_tool_result(result: dict[str, Any]) -> str:

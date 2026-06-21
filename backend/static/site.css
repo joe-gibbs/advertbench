@@ -174,6 +174,71 @@ p { color: var(--muted); line-height: 1.55; }
   color: var(--accent-hover);
 }
 
+.revealPanel {
+  margin-top: 20px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  border-radius: 8px;
+  background: #f0faf7;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  animation: revealIn 420ms ease-out both;
+}
+
+.revealIntro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.revealIntro span, .revealCard span {
+  color: var(--accent-hover);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.revealIntro strong {
+  font-size: 18px;
+}
+
+.revealGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.revealCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  transform: translateY(8px);
+  opacity: 0;
+  animation: revealCardIn 360ms ease-out 140ms both;
+}
+
+.revealCard:nth-child(2) { animation-delay: 220ms; }
+
+.revealCard.winner {
+  border-color: rgba(15, 118, 110, 0.42);
+  box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.1);
+}
+
+.revealCard h2 { margin-top: 8px; }
+.revealCard p { margin-top: 6px; }
+
+@keyframes revealIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes revealCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .empty code {
   display: block;
   margin-top: 16px;
@@ -188,7 +253,7 @@ p { color: var(--muted); line-height: 1.55; }
 
 .matchSummary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-top: 18px;
 }
@@ -368,7 +433,7 @@ textarea, input {
   .siteHeader { position: static; padding: 16px 20px; }
   .siteNav { width: 100%; overflow-x: auto; }
   .siteNav a { flex: 1; text-align: center; }
-  .comparisonGrid, .methodGrid { grid-template-columns: 1fr; }
+  .comparisonGrid, .methodGrid, .revealGrid { grid-template-columns: 1fr; }
   .headerActions { justify-content: flex-start; }
 }
 

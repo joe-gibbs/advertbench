@@ -22,22 +22,41 @@
       <div class="notice">Vote was not accepted: {{ status }}.</div>
     {% endif %}
 
+    {% if reveal and reveal.sets|length == 2 %}
+      <section class="revealPanel" aria-label="Revealed vote result">
+        <div class="revealIntro">
+          <span>Revealed</span>
+          <strong>You chose {{ reveal.sets[0].modelName }}</strong>
+        </div>
+        <div class="revealGrid">
+          {% for set in reveal.sets %}
+            <article class="revealCard {{ 'winner' if set.id == reveal.winnerSetId else '' }}">
+              <span>{{ "Your choice" if set.id == reveal.winnerSetId else "Other set" }}</span>
+              <h2>{{ set.modelName }}</h2>
+              <p>{{ set.rating }} Elo / {{ set.matches }} votes / {{ set.wins }}-{{ set.losses }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
     {% if not comparison or comparison.sets|length != 2 %}
       <section class="empty">
-        <h2>No comparison ready</h2>
-        <p>Generate an output run from the backend, then refresh.</p>
-        <code>python backend/manage.py generate productivity_app</code>
+        <h2>You have compared all available generations</h2>
+        <p>There are no remaining unseen matchups for this voter right now.</p>
       </section>
     {% else %}
       {% set sets = comparison.sets %}
+      {% if comparison.ad %}
+        <section class="tablePanel" aria-label="Prompt for this comparison">
+          <strong>Prompt: {{ comparison.ad.key }}</strong>
+          <p>{{ comparison.ad.prompt }}</p>
+        </section>
+      {% endif %}
       <section class="matchSummary" aria-label="Current comparison summary">
         <div>
           <span>Current match</span>
-          <strong>{{ sets[0].modelName }} vs {{ sets[1].modelName }}</strong>
-        </div>
-        <div>
-          <span>Total votes</span>
-          <strong>{{ total_votes }}</strong>
+          <strong>Set A vs Set B</strong>
         </div>
       </section>
 
@@ -47,8 +66,8 @@
           <article class="setCard">
             <div class="setHeader">
               <div>
-                <h2>{{ set.modelName }}</h2>
-                <p>{{ set.rating }} Elo / {{ set.matches }} votes</p>
+                <h2>{{ set.label }}</h2>
+                <p>Choose based on the ads only. Model details are hidden until after voting.</p>
               </div>
               <form method="post" action="/vote">
                 <input type="hidden" name="winnerSetId" value="{{ set.id }}">
@@ -60,7 +79,7 @@
             <div class="assetGrid">
               {% for asset in set.assets %}
                 <figure class="assetFrame">
-                  <img src="{{ asset.publicPath }}" alt="{{ set.modelName }} {{ asset.label }}">
+                  <img src="{{ asset.publicPath }}" alt="{{ set.label }} {{ asset.label }}">
                   <figcaption>
                     {{ asset.label }}
                     <span>{{ asset.width }}x{{ asset.height }}</span>
