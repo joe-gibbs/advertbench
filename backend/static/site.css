@@ -127,7 +127,8 @@ button:hover, .button:hover, .linkButton:hover {
 }
 
 .pageIntro.split { align-items: center; }
-.pageIntro.compactIntro { justify-content: flex-end; padding: 18px; }
+.pageIntro.compactIntro { align-items: center; justify-content: space-between; padding: 18px; }
+.pageIntro.compactIntro h1 { font-size: 24px; }
 .headerActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 
 .eyebrow {

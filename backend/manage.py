@@ -44,6 +44,31 @@ def seed() -> None:
         close_pool()
 
 
+def successful_generation_counts(model_slugs: list[str], prompts: list[str], required_assets: int) -> dict[str, int]:
+    if not model_slugs or not prompts:
+        return {}
+    with connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT m.slug, count(DISTINCT os.prompt)::int AS successful_generations
+            FROM models m
+            LEFT JOIN output_sets os
+              ON os.model_id = m.id
+             AND os.status = 'completed'
+             AND os.prompt = ANY(%s::text[])
+             AND (
+               SELECT count(*)
+               FROM ad_assets aa
+               WHERE aa.output_set_id = os.id
+             ) >= %s
+            WHERE m.slug = ANY(%s::text[])
+            GROUP BY m.slug
+            """,
+            (prompts, required_assets, model_slugs),
+        ).fetchall()
+    return {row["slug"]: row["successful_generations"] for row in rows}
+
+
 async def generate_one_ad(ad_key: str | None) -> None:
     config = load_advert_config()
     ads = config.ads
@@ -69,32 +94,32 @@ async def generate_round_robin() -> None:
     completed_seen: set[tuple[str, str]] = set()
     generated = 0
 
-    while True:
-        scheduled_this_round = 0
-        for model in config.models:
-            for ad in config.ads:
-                pair = (model.slug, ad.key)
-                if pair in attempted:
-                    continue
-
-                completed = completed_model_slugs_for_prompt(ad.render_prompt(), [model.slug], required_assets)
-                if model.slug in completed:
-                    completed_seen.add(pair)
-                    continue
-
-                attempted.add(pair)
-                scheduled_this_round += 1
-                print(f"generating {ad.key} with {model.slug}")
-                run_id = await generate_run(ad.render_prompt(), log=print, model_slugs=[model.slug])
-                if run_id:
-                    generated += 1
-                    print(f"generated {ad.key} with {model.slug} run {run_id}")
-                else:
-                    print(f"skipped {ad.key} with {model.slug}: already completed")
+    for ad in config.ads:
+        while True:
+            model_slugs = [model.slug for model in config.models]
+            completed = completed_model_slugs_for_prompt(ad.render_prompt(), model_slugs, required_assets)
+            completed_seen.update((slug, ad.key) for slug in completed)
+            candidates = [
+                model
+                for model in config.models
+                if model.slug not in completed and (model.slug, ad.key) not in attempted
+            ]
+            if not candidates:
                 break
 
-        if scheduled_this_round == 0:
-            break
+            success_counts = successful_generation_counts(model_slugs, [configured_ad.render_prompt() for configured_ad in config.ads], required_assets)
+            model = min(candidates, key=lambda candidate: (success_counts.get(candidate.slug, 0), model_slugs.index(candidate.slug)))
+            attempted.add((model.slug, ad.key))
+            print(
+                f"generating {ad.key} with {model.slug} "
+                f"(successful_generations={success_counts.get(model.slug, 0)})"
+            )
+            run_id = await generate_run(ad.render_prompt(), log=print, model_slugs=[model.slug])
+            if run_id:
+                generated += 1
+                print(f"generated {ad.key} with {model.slug} run {run_id}")
+            else:
+                print(f"skipped {ad.key} with {model.slug}: already completed")
 
     print(f"round-robin complete: runs_started={generated} already_completed={len(completed_seen)}")
 
