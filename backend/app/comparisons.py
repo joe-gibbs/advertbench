@@ -76,6 +76,7 @@ def get_sets_by_ids(ids: list[str]) -> list[dict]:
 
 def get_next_comparison(voter_hash: str) -> dict | None:
     config = load_advert_config()
+    configured_slugs = [model.slug for model in config.models]
     min_assets = len(config.ad_sizes)
     with connection() as conn:
         row = conn.execute(
@@ -83,8 +84,10 @@ def get_next_comparison(voter_hash: str) -> dict | None:
             WITH ready_sets AS (
               SELECT os.id, os.model_id, os.rating
               FROM output_sets os
+              JOIN models m ON m.id = os.model_id
               JOIN ad_assets aa ON aa.output_set_id = os.id
               WHERE os.status = 'completed'
+                AND m.slug = ANY(%s::text[])
               GROUP BY os.id
               HAVING count(*) >= %s
             )
@@ -100,7 +103,7 @@ def get_next_comparison(voter_hash: str) -> dict | None:
             ORDER BY abs(a.rating - b.rating), random()
             LIMIT 1
             """,
-            (min_assets, voter_hash),
+            (configured_slugs, min_assets, voter_hash),
         ).fetchone()
 
     if not row:
@@ -112,6 +115,8 @@ def get_next_comparison(voter_hash: str) -> dict | None:
 
 
 def get_leaderboard() -> list[dict]:
+    config = load_advert_config()
+    configured_slugs = [model.slug for model in config.models]
     try:
         capabilities = openrouter_model_capabilities_sync()
     except Exception:
@@ -133,10 +138,11 @@ def get_leaderboard() -> list[dict]:
               count(os.id) FILTER (WHERE os.status = 'failed')::int AS failed_generations
             FROM models m
             LEFT JOIN output_sets os ON os.model_id = m.id
+            WHERE m.slug = ANY(%s::text[])
             GROUP BY m.id, m.display_name, m.slug
             ORDER BY rating DESC, matches DESC, successful_generations DESC, m.display_name
-            LIMIT 10
-            """
+            """,
+            (configured_slugs,),
         ).fetchall()
     return [
         {

@@ -1,6 +1,6 @@
 import json
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 from psycopg.types.json import Jsonb
 
@@ -20,7 +20,7 @@ class GenerationHarnessError(RuntimeError):
         self.turns = turns
 
 
-async def generate_run(prompt: str) -> str:
+async def generate_run(prompt: str, log: Callable[[str], None] | None = None) -> str:
     settings = get_settings()
     config = sync_models_from_config()
     mode = "openrouter-e2b-agent"
@@ -42,6 +42,16 @@ async def generate_run(prompt: str) -> str:
         conn.commit()
         run_id = str(row["id"])
 
+    run_log: dict[str, Any] = {
+        "run_id": run_id,
+        "mode": mode,
+        "prompt": prompt,
+        "requested_sizes": [size.model_dump() for size in config.ad_sizes],
+        "models": [],
+    }
+    _emit(log, f"run {run_id} started: {len(config.models)} models, {len(config.ad_sizes)} sizes")
+    _write_generation_log(run_id, run_log)
+
     with connection() as conn:
         models = conn.execute(
             """
@@ -59,11 +69,53 @@ async def generate_run(prompt: str) -> str:
         for model in models:
             supports_images = await model_supports_images(model["slug"])
             supports_tools = await model_supports_tools(model["slug"])
+            transcript: list[dict[str, Any]] = []
+            model_log: dict[str, Any] = {
+                "model": model["slug"],
+                "display_name": model["display_name"],
+                "supports_tools": supports_tools,
+                "supports_images": supports_images,
+                "status": "running",
+                "transcript": transcript,
+            }
+            run_log["models"].append(model_log)
+            _emit(
+                log,
+                f"model start: {model['slug']} tools={_yes_no(supports_tools)} images={_yes_no(supports_images)}",
+            )
+            _write_generation_log(run_id, run_log)
             try:
-                await generate_set(run_id, model, prompt, config.ad_sizes, supports_images, supports_tools)
+                result = await generate_set(
+                    run_id,
+                    model,
+                    prompt,
+                    config.ad_sizes,
+                    supports_images,
+                    supports_tools,
+                    transcript=transcript,
+                    log=log,
+                )
                 successes += 1
+                model_log.update(
+                    {
+                        "status": "completed",
+                        "output_set_id": result["output_set_id"],
+                        "turns": result["turns"],
+                        "generation_ms": result["generation_ms"],
+                    }
+                )
+                _emit(log, f"model done: {model['slug']} turns={result['turns']} output_set={result['output_set_id']}")
             except Exception as error:
                 failures.append(f"{model['slug']}: {error}")
+                model_log.update(
+                    {
+                        "status": "failed",
+                        "error": str(error),
+                        "turns": getattr(error, "turns", None),
+                    }
+                )
+                _emit(log, f"model failed: {model['slug']} error={error}")
+            _write_generation_log(run_id, run_log)
 
         with connection() as conn:
             status = "completed" if successes else "failed"
@@ -73,6 +125,11 @@ async def generate_run(prompt: str) -> str:
                 (status, error, run_id),
             )
             conn.commit()
+        run_log["status"] = status
+        run_log["successes"] = successes
+        run_log["failures"] = failures
+        log_path = _write_generation_log(run_id, run_log)
+        _emit(log, f"run {run_id} {status}: successes={successes} failures={len(failures)} log={log_path}")
     except Exception as error:
         with connection() as conn:
             conn.execute(
@@ -80,6 +137,10 @@ async def generate_run(prompt: str) -> str:
                 (str(error), run_id),
             )
             conn.commit()
+        run_log["status"] = "failed"
+        run_log["error"] = str(error)
+        log_path = _write_generation_log(run_id, run_log)
+        _emit(log, f"run {run_id} failed: {error} log={log_path}")
         raise
 
     return run_id
@@ -92,7 +153,10 @@ async def generate_set(
     sizes: list[AdSize],
     supports_images: bool,
     supports_tools: bool,
-) -> None:
+    *,
+    transcript: list[dict[str, Any]] | None = None,
+    log: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
     started = perf_counter()
     generation_turns = 0
     with connection() as conn:
@@ -115,6 +179,8 @@ async def generate_set(
             supports_images=supports_images,
             supports_tools=supports_tools,
             model_settings=(model.get("metadata") or {}).get("settings", {}),
+            transcript=transcript,
+            log=log,
         )
 
         generation_ms = round((perf_counter() - started) * 1000)
@@ -149,6 +215,7 @@ async def generate_set(
                 """,
                 (generation_ms, generation_turns, output_set_id),
             )
+        return {"output_set_id": output_set_id, "turns": generation_turns, "generation_ms": generation_ms}
     except Exception as error:
         generation_turns = generation_turns or getattr(error, "turns", 0) or None
         with connection() as conn:
@@ -173,6 +240,7 @@ async def generate_ads_with_openrouter_e2b_agent(
     supports_tools: bool = False,
     model_settings: dict[str, Any] | None = None,
     transcript: list[dict[str, Any]] | None = None,
+    log: Callable[[str], None] | None = None,
 ) -> tuple[dict[str, bytes], int]:
     max_turns = max(1, get_settings().generation_max_turns)
     messages = build_agent_messages(prompt, sizes, supports_images, supports_tools)
@@ -204,11 +272,14 @@ async def generate_ads_with_openrouter_e2b_agent(
                 result = {"ok": False, "error": f"invalid agent action: {error}"}
                 last_result = _compact_tool_result(result)
                 messages.append({"role": "user", "content": _tool_result_message("agent_action", result)})
+                _emit(log, f"{model_slug} turn {turn}: invalid action: {error}")
                 if transcript is not None:
                     transcript.append({"event": "invalid_action", "turn": turn, "result": _json_safe(result)})
                 continue
 
             if turn_result["mode"] == "tools":
+                action_names = ", ".join(str(action.get("tool")) for action in turn_result.get("actions", [])) or "none"
+                _emit(log, f"{model_slug} turn {turn}: tool calls={action_names}")
                 if transcript is not None:
                     transcript.append(
                         {
@@ -226,8 +297,10 @@ async def generate_ads_with_openrouter_e2b_agent(
                     supports_images=supports_images,
                     turn=turn,
                     transcript=transcript,
+                    log=log,
                 )
                 if completed is not None:
+                    _emit(log, f"{model_slug} turn {turn}: completed")
                     return completed, turn
                 if transcript is not None and turn_result.get("last_result"):
                     last_result = str(turn_result["last_result"])
@@ -247,6 +320,7 @@ async def generate_ads_with_openrouter_e2b_agent(
             if transcript is not None:
                 transcript.append({"event": "assistant_action", "turn": turn, "action": _json_safe(action)})
             tool = action.get("tool")
+            _emit(log, f"{model_slug} turn {turn}: action={tool}")
 
             if tool == "bash":
                 command = str(action.get("command") or "")
@@ -254,6 +328,7 @@ async def generate_ads_with_openrouter_e2b_agent(
                     result = {"ok": False, "error": "bash tool requires command"}
                 else:
                     result = sandbox.run_bash(command)
+                _emit(log, f"{model_slug} turn {turn}: bash {_format_log_result(result)}")
                 last_result = _compact_tool_result(result)
                 messages.append({"role": "user", "content": _tool_result_message("bash", result)})
                 if transcript is not None:
@@ -263,6 +338,7 @@ async def generate_ads_with_openrouter_e2b_agent(
             if tool == "view_image":
                 path = str(action.get("path") or "")
                 result = _view_image_result(sandbox, path, supports_images)
+                _emit(log, f"{model_slug} turn {turn}: view_image path={path} {_format_log_result(result)}")
                 last_result = _compact_tool_result({key: value for key, value in result.items() if key != "data_url"})
                 messages.append(_view_image_message(result, supports_images))
                 if transcript is not None:
@@ -272,6 +348,7 @@ async def generate_ads_with_openrouter_e2b_agent(
             if tool == "final":
                 try:
                     rendered = sandbox.collect_outputs(sizes)
+                    _emit(log, f"{model_slug} turn {turn}: final accepted")
                     if transcript is not None:
                         transcript.append(
                             {
@@ -283,6 +360,7 @@ async def generate_ads_with_openrouter_e2b_agent(
                     return rendered, turn
                 except Exception as error:
                     result = {"ok": False, "error": str(error)}
+                    _emit(log, f"{model_slug} turn {turn}: final rejected: {error}")
                     last_result = _compact_tool_result(result)
                     messages.append({"role": "user", "content": _tool_result_message("final", result)})
                     if transcript is not None:
@@ -291,6 +369,7 @@ async def generate_ads_with_openrouter_e2b_agent(
 
         if transcript is not None:
             transcript.append({"event": "failed", "turns": max_turns, "last_result": last_result})
+        _emit(log, f"{model_slug}: failed after {max_turns} turns")
         raise GenerationHarnessError(f"Failed to generate all required files after {max_turns} turns: {last_result}", max_turns)
     finally:
         sandbox.close()
@@ -305,6 +384,7 @@ async def _handle_native_tool_turn(
     supports_images: bool,
     turn: int,
     transcript: list[dict[str, Any]] | None,
+    log: Callable[[str], None] | None,
 ) -> dict[str, bytes] | None:
     assistant_message = turn_result["message"]
     messages.append(assistant_message)
@@ -315,6 +395,7 @@ async def _handle_native_tool_turn(
     if not actions:
         result = {"ok": False, "error": "Model did not call a tool. Use bash, view_image, or final."}
         messages.append({"role": "user", "content": _tool_result_message("agent_action", result)})
+        _emit(log, f"turn {turn}: no tool call")
         turn_result["last_result"] = _compact_tool_result(result)
         if transcript is not None:
             transcript.append({"event": "invalid_action", "turn": turn, "result": _json_safe(result)})
@@ -328,6 +409,7 @@ async def _handle_native_tool_turn(
         if "_argument_error" in arguments:
             result = {"ok": False, "error": arguments["_argument_error"]}
             _append_native_tool_result(messages, tool_call_id, str(tool), result)
+            _emit(log, f"turn {turn}: {tool} argument error: {arguments['_argument_error']}")
             turn_result["last_result"] = _compact_tool_result(result)
             if transcript is not None:
                 transcript.append({"event": "tool_result", "turn": turn, "tool": tool, "result": _json_safe(result)})
@@ -337,6 +419,7 @@ async def _handle_native_tool_turn(
             command = str(arguments.get("command") or "")
             result = sandbox.run_bash(command) if command else {"ok": False, "error": "bash tool requires command"}
             _append_native_tool_result(messages, tool_call_id, "bash", result)
+            _emit(log, f"turn {turn}: bash {_format_log_result(result)}")
             turn_result["last_result"] = _compact_tool_result(result)
             if transcript is not None:
                 transcript.append({"event": "tool_result", "turn": turn, "tool": "bash", "result": _json_safe(result)})
@@ -346,6 +429,7 @@ async def _handle_native_tool_turn(
             path = str(arguments.get("path") or "")
             result = _view_image_result(sandbox, path, supports_images)
             _append_native_tool_result(messages, tool_call_id, "view_image", {key: value for key, value in result.items() if key != "data_url"})
+            _emit(log, f"turn {turn}: view_image path={path} {_format_log_result(result)}")
             if supports_images and result.get("ok"):
                 follow_up_messages.append(_view_image_message(result, supports_images))
             turn_result["last_result"] = _compact_tool_result({key: value for key, value in result.items() if key != "data_url"})
@@ -358,6 +442,7 @@ async def _handle_native_tool_turn(
                 rendered = sandbox.collect_outputs(sizes)
                 result = {"ok": True, "files": {key: len(value) for key, value in rendered.items()}}
                 _append_native_tool_result(messages, tool_call_id, "final", result)
+                _emit(log, f"turn {turn}: final accepted")
                 if transcript is not None:
                     transcript.append(
                         {
@@ -370,6 +455,7 @@ async def _handle_native_tool_turn(
             except Exception as error:
                 result = {"ok": False, "error": str(error)}
                 _append_native_tool_result(messages, tool_call_id, "final", result)
+                _emit(log, f"turn {turn}: final rejected: {error}")
                 turn_result["last_result"] = _compact_tool_result(result)
                 if transcript is not None:
                     transcript.append({"event": "tool_result", "turn": turn, "tool": "final", "result": _json_safe(result)})
@@ -377,6 +463,7 @@ async def _handle_native_tool_turn(
 
         result = {"ok": False, "error": f"Unknown tool: {tool}"}
         _append_native_tool_result(messages, tool_call_id, str(tool), result)
+        _emit(log, f"turn {turn}: unknown tool {tool}")
         turn_result["last_result"] = _compact_tool_result(result)
         if transcript is not None:
             transcript.append({"event": "tool_result", "turn": turn, "tool": tool, "result": _json_safe(result)})
@@ -451,3 +538,34 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, list):
         return [_json_safe(item) for item in value]
     return value
+
+
+def _emit(log: Callable[[str], None] | None, message: str) -> None:
+    if log:
+        log(message)
+
+
+def _yes_no(value: bool) -> str:
+    return "yes" if value else "no"
+
+
+def _format_log_result(result: dict[str, Any]) -> str:
+    ok = "ok" if result.get("ok") else "failed"
+    if result.get("error"):
+        return f"{ok} error={str(result['error'])[:300]}"
+    for key in ("stderr", "stdout", "text", "output"):
+        value = result.get(key)
+        if isinstance(value, str) and value.strip():
+            return f"{ok} {key}={value.strip()[-300:]}"
+    files = result.get("files")
+    if files:
+        return f"{ok} files={files}"
+    return ok
+
+
+def _write_generation_log(run_id: str, run_log: dict[str, Any]) -> str:
+    logs_dir = get_settings().data_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    path = logs_dir / f"{run_id}.json"
+    path.write_text(json.dumps(_json_safe(run_log), indent=2), encoding="utf-8")
+    return str(path)
