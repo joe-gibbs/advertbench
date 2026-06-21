@@ -1,0 +1,243 @@
+{
+  "models": [
+    {
+      "slug": "openai/gpt-5.5",
+      "displayName": "GPT-5.5",
+      "releaseDate": "2026-04-24",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "openai/gpt-5.5-pro",
+      "displayName": "GPT-5.5 Pro",
+      "releaseDate": "2026-04-24",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "anthropic/claude-opus-4.8",
+      "displayName": "Claude Opus 4.8",
+      "releaseDate": "2026-05-27",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        },
+        "verbosity": "max"
+      }
+    },
+    {
+      "slug": "~anthropic/claude-sonnet-latest",
+      "displayName": "Claude Sonnet Latest",
+      "releaseDate": "2026-04-27",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        },
+        "verbosity": "max"
+      }
+    },
+    {
+      "slug": "~anthropic/claude-haiku-latest",
+      "displayName": "Claude Haiku Latest",
+      "releaseDate": "2026-04-27",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "slug": "openai/gpt-oss-120b",
+      "displayName": "GPT OSS 120B",
+      "releaseDate": "2025-08-05",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "slug": "openai/gpt-oss-20b",
+      "displayName": "GPT OSS 20B",
+      "releaseDate": "2025-08-05",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "slug": "z-ai/glm-5.2",
+      "displayName": "GLM 5.2",
+      "releaseDate": "2026-06-16",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "openai/gpt-5.4",
+      "displayName": "GPT-5.4",
+      "releaseDate": "2026-03-05",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "openai/gpt-5.4-pro",
+      "displayName": "GPT-5.4 Pro",
+      "releaseDate": "2026-03-05",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "anthropic/claude-opus-4.5",
+      "displayName": "Claude Opus 4.5",
+      "releaseDate": "2025-11-24",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        },
+        "verbosity": "max"
+      }
+    },
+    {
+      "slug": "deepseek/deepseek-v4-flash",
+      "displayName": "DeepSeek V4 Flash",
+      "releaseDate": "2026-04-24",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "google/gemini-3.1-pro-preview",
+      "displayName": "Gemini 3.1 Pro Preview",
+      "releaseDate": "2026-02-19",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "slug": "google/gemini-3.5-flash",
+      "displayName": "Gemini 3.5 Flash",
+      "releaseDate": "2026-05-19",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "slug": "deepseek/deepseek-v4-pro",
+      "displayName": "DeepSeek V4 Pro",
+      "releaseDate": "2026-04-24",
+      "settings": {
+        "reasoning": {
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "slug": "x-ai/grok-4.3",
+      "displayName": "Grok 4.3",
+      "releaseDate": "2026-04-30",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "slug": "qwen/qwen3.7-max",
+      "displayName": "Qwen3.7 Max",
+      "releaseDate": "2026-05-21",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "slug": "qwen/qwen3.7-plus",
+      "displayName": "Qwen3.7 Plus",
+      "releaseDate": "2026-06-03",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "slug": "moonshotai/kimi-k2.7-code",
+      "displayName": "Kimi K2.7 Code",
+      "releaseDate": "2026-06-12",
+      "settings": {
+        "reasoning": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "slug": "mistralai/mistral-medium-3-5",
+      "displayName": "Mistral Medium 3.5",
+      "releaseDate": "2026-04-30",
+      "settings": {
+        "reasoning": {
+          "effort": "high"
+        }
+      }
+    }
+  ],
+  "ads": [
+    {
+      "key": "productivity_app",
+      "prompt": "A clean ad for a new productivity app for small teams"
+    }
+  ],
+  "adSizes": [
+    {
+      "key": "feed_square",
+      "label": "Feed Square",
+      "width": 1080,
+      "height": 1080,
+      "ratio": "1:1"
+    },
+    {
+      "key": "feed_vertical",
+      "label": "Feed Vertical",
+      "width": 1440,
+      "height": 1800,
+      "ratio": "4:5"
+    },
+    {
+      "key": "feed_landscape",
+      "label": "Feed Landscape",
+      "width": 1200,
+      "height": 628,
+      "ratio": "1.91:1"
+    },
+    {
+      "key": "story_reel",
+      "label": "Story/Reel",
+      "width": 1080,
+      "height": 1920,
+      "ratio": "9:16"
+    }
+  ]
+}

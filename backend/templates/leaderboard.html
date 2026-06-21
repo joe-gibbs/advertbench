@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - AdvertBench{% endblock %}
+
+{% block content %}
+  <main class="pageShell">
+    <section class="pageIntro">
+      <div>
+        <p class="eyebrow">Rankings</p>
+        <h1>Leaderboard</h1>
+        <p>Output sets are ranked by Elo after anonymous pairwise votes.</p>
+      </div>
+    </section>
+
+    {% if not leaderboard %}
+      <section class="empty">
+        <h2>No ranked output sets yet</h2>
+        <p>Generate a run and collect votes to populate this table.</p>
+      </section>
+    {% else %}
+      <section class="tablePanel">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Model</th>
+              <th>Release</th>
+              <th>Config</th>
+              <th>Images</th>
+              <th>Elo</th>
+              <th>Votes</th>
+              <th>Record</th>
+              <th>Win rate</th>
+              <th>Generations</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in leaderboard %}
+              <tr>
+                <td><span class="rankBadge">{{ loop.index }}</span></td>
+                <td>
+                  <strong>{{ row.modelName }}</strong>
+                  <small>{{ row.modelSlug }}</small>
+                </td>
+                <td>{{ row.releaseDate or "Unknown" }}</td>
+                <td>{{ row.modelConfig }}</td>
+                <td>
+                  {% if row.supportsImages is sameas true %}
+                    Yes
+                  {% elif row.supportsImages is sameas false %}
+                    No
+                  {% else %}
+                    Unknown
+                  {% endif %}
+                </td>
+                <td>{{ row.rating }}</td>
+                <td>{{ row.matches }}</td>
+                <td>{{ row.wins }}-{{ row.losses }}</td>
+                <td>{{ ((row.wins / row.matches) * 100)|round|int if row.matches else 0 }}%</td>
+                <td>
+                  <strong>{{ row.successfulGenerations }} succeeded</strong>
+                  <small>{{ row.failedGenerations }} failed</small>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    {% endif %}
+  </main>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Vote - AdvertBench{% endblock %}
+
+{% block content %}
+  <main class="pageShell">
+    <header class="pageIntro split">
+      <div>
+        <p class="eyebrow">Pairwise review</p>
+        <h1>AdvertBench</h1>
+        <p>Choose the stronger complete ad set. Each vote updates the Elo ranking.</p>
+      </div>
+      <div class="headerActions">
+        <a class="linkButton" href="/leaderboard">View leaderboard</a>
+        <a class="button secondary" href="/">Refresh pair</a>
+      </div>
+    </header>
+
+    {% if status == "saved" %}
+      <div class="notice success">Vote saved.</div>
+    {% elif status %}
+      <div class="notice">Vote was not accepted: {{ status }}.</div>
+    {% endif %}
+
+    {% if not comparison or comparison.sets|length != 2 %}
+      <section class="empty">
+        <h2>No comparison ready</h2>
+        <p>Generate an output run from the backend, then refresh.</p>
+        <code>python backend/manage.py generate productivity_app</code>
+      </section>
+    {% else %}
+      {% set sets = comparison.sets %}
+      <section class="matchSummary" aria-label="Current comparison summary">
+        <div>
+          <span>Current match</span>
+          <strong>{{ sets[0].modelName }} vs {{ sets[1].modelName }}</strong>
+        </div>
+        <div>
+          <span>Total votes</span>
+          <strong>{{ total_votes }}</strong>
+        </div>
+      </section>
+
+      <section class="comparisonGrid" aria-label="Ad set comparison">
+        {% for set in sets %}
+          {% set other = sets[1] if loop.index0 == 0 else sets[0] %}
+          <article class="setCard">
+            <div class="setHeader">
+              <div>
+                <h2>{{ set.modelName }}</h2>
+                <p>{{ set.rating }} Elo / {{ set.matches }} votes</p>
+              </div>
+              <form method="post" action="/vote">
+                <input type="hidden" name="winnerSetId" value="{{ set.id }}">
+                <input type="hidden" name="loserSetId" value="{{ other.id }}">
+                <input type="hidden" name="idempotencyKey" value="{{ idempotency_key }}">
+                <button class="voteButton" type="submit">Choose this set</button>
+              </form>
+            </div>
+            <div class="assetGrid">
+              {% for asset in set.assets %}
+                <figure class="assetFrame">
+                  <img src="{{ asset.publicPath }}" alt="{{ set.modelName }} {{ asset.label }}">
+                  <figcaption>
+                    {{ asset.label }}
+                    <span>{{ asset.width }}x{{ asset.height }}</span>
+                  </figcaption>
+                </figure>
+              {% endfor %}
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
+  </main>
+{% endblock %}

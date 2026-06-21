@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: advertbench
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python backend/manage.py migrate && python backend/manage.py seed && uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: advertbench-db
+          property: connectionString
+      - key: DATA_DIR
+        value: /var/data
+      - key: VOTER_HASH_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        value: https://advertbench.onrender.com
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: E2B_API_KEY
+        sync: false
+      - key: GENERATION_MAX_TURNS
+        value: 100
+    disk:
+      name: advertbench-assets
+      mountPath: /var/data
+      sizeGB: 10
+
+databases:
+  - name: advertbench-db
+    plan: starter
