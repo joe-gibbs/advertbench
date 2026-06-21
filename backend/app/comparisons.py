@@ -196,8 +196,6 @@ def get_leaderboard() -> list[dict]:
               COALESCE(sum(os.wins) FILTER (WHERE os.status = 'completed'), 0)::int AS wins,
               COALESCE(sum(os.losses) FILTER (WHERE os.status = 'completed'), 0)::int AS losses,
               COALESCE(sum(os.matches) FILTER (WHERE os.status = 'completed'), 0)::int AS matches,
-              count(os.id) FILTER (WHERE os.status = 'completed')::int AS successful_generations,
-              count(os.id) FILTER (WHERE os.status = 'failed')::int AS failed_generations,
               round(avg(os.generation_turns) FILTER (
                 WHERE os.status IN ('completed', 'failed') AND os.generation_turns IS NOT NULL
               ), 1) AS average_generation_turns
@@ -205,7 +203,7 @@ def get_leaderboard() -> list[dict]:
             LEFT JOIN output_sets os ON os.model_id = m.id
             WHERE m.slug = ANY(%s::text[])
             GROUP BY m.id, m.display_name, m.slug
-            ORDER BY rating DESC, matches DESC, successful_generations DESC, m.display_name
+            ORDER BY rating DESC, matches DESC, m.display_name
             """,
             (configured_slugs,),
         ).fetchall()
@@ -222,8 +220,6 @@ def get_leaderboard() -> list[dict]:
             "wins": row["wins"],
             "losses": row["losses"],
             "matches": row["matches"],
-            "successfulGenerations": row["successful_generations"],
-            "failedGenerations": row["failed_generations"],
             "averageGenerationTurns": row["average_generation_turns"],
         }
         for row in rows

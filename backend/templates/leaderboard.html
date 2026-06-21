@@ -30,7 +30,6 @@
               <th>Record</th>
               <th>Win rate</th>
               <th>Avg turns</th>
-              <th>Generations</th>
             </tr>
           </thead>
           <tbody>
@@ -57,10 +56,6 @@
                 <td>{{ row.wins }}-{{ row.losses }}</td>
                 <td>{{ ((row.wins / row.matches) * 100)|round|int if row.matches else 0 }}%</td>
                 <td>{{ row.averageGenerationTurns or "n/a" }}</td>
-                <td>
-                  <strong>{{ row.successfulGenerations }} succeeded</strong>
-                  <small>{{ row.failedGenerations }} failed</small>
-                </td>
               </tr>
             {% endfor %}
           </tbody>
