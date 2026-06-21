@@ -207,7 +207,43 @@
   "ads": [
     {
       "key": "productivity_app",
-      "prompt": "A clean ad for a new productivity app for small teams"
+      "prompt": "Company: Northstar Labs. Product: FlowPilot, an AI productivity workspace for small teams. Audience: founders, operators, and project leads at teams of 5 to 50 people. Goal: drive trial signups by making the product feel practical, fast, and trustworthy. Required text: FlowPilot; Plan less. Ship more.; AI task planning for small teams; 14-day free trial. Logo: a clean four-point compass star inside a rounded square, paired with the FlowPilot wordmark. Visual style: premium SaaS ad with crisp dashboard UI elements, calm whitespace, sharp typography, subtle depth, deep navy, electric teal, white, and a warm yellow accent. Composition: show a planning dashboard or task board as the main visual, with the logo and offer text clearly readable."
+    },
+    {
+      "key": "fintech_card",
+      "prompt": "Company: Ledgerly. Product: Ledgerly Card, a business expense card and spend management app. Audience: finance leads and startup founders who want cleaner expense control. Goal: communicate trust, speed, and visibility. Required text: Ledgerly Card; Spend smarter by Friday.; Real-time budgets for every team; Get started free. Logo: a minimal stacked-line ledger icon forming an L, with a precise modern wordmark. Visual style: polished fintech ad, clean transaction UI, card mockup, confident typography, graphite black, mint green, white, and silver. Composition: make the card and mobile spend dashboard the hero, with clear hierarchy for the slogan and call to action."
+    },
+    {
+      "key": "telehealth_clinic",
+      "prompt": "Company: Harbor Health. Product: Harbor Virtual Clinic, same-day online primary care. Audience: busy families and professionals who need convenient medical appointments. Goal: make the service feel credible, calm, and accessible. Required text: Harbor Health; See a clinician today; Online primary care from home; Book in minutes. Logo: a simple blue harbor arch with a small medical cross in negative space. Visual style: healthcare ad with bright natural light, soft blue and green palette, friendly interface cards, professional but not cold. Composition: show a video visit screen, appointment time, and patient-friendly app UI without making it look like a hospital poster."
+    },
+    {
+      "key": "ev_charger",
+      "prompt": "Company: VoltNest. Product: VoltNest Home Charger, a compact Level 2 electric vehicle charger. Audience: homeowners buying or upgrading an EV. Goal: make charging feel easy, premium, and reliable. Required text: VoltNest; Wake up fully charged; Fast home EV charging; Install from $499. Logo: a house roofline merged with a lightning bolt, simple and geometric. Visual style: clean automotive tech ad, modern garage or driveway scene, bright product lighting, charcoal, white, cobalt, and lime accent. Composition: make the charger mounted on a wall the hero, show a charging cable connected to a sleek EV, and keep the headline bold and readable."
+    },
+    {
+      "key": "skincare_serum",
+      "prompt": "Company: Aster & Vale. Product: Dewglass Vitamin C Serum. Audience: skincare buyers who want a premium daily brightening serum. Goal: feel elegant, clinical, and fresh without looking generic. Required text: Aster & Vale; Dewglass Vitamin C Serum; Brighter skin, daily; 20% vitamin C + hyaluronic acid. Logo: refined serif wordmark with a small aster flower mark drawn in thin lines. Visual style: beauty ad with macro product photography, glass bottle, dewy texture, soft cream, coral, sage, and clean white. Composition: bottle and serum texture should dominate, with graceful type and enough contrast for all required text."
+    },
+    {
+      "key": "travel_luggage",
+      "prompt": "Company: Wayline. Product: Wayline Carry-On Pro, lightweight smart luggage for frequent travelers. Audience: business travelers and weekend flyers. Goal: communicate durability, order, and effortless movement. Required text: Wayline; Built for smoother departures; Carry-On Pro; Lifetime shell warranty. Logo: a simple forward arrow folded into a luggage tag shape. Visual style: premium travel ad, airport lounge or hotel entry setting, clean product render, warm gray, ocean blue, white, and brass accent. Composition: hero the suitcase at a three-quarter angle, include subtle travel UI or packing details, and keep the warranty message visible."
+    },
+    {
+      "key": "coffee_subscription",
+      "prompt": "Company: Ember Route. Product: Ember Route Coffee Club, a rotating specialty coffee subscription. Audience: people who brew coffee at home and want better beans without guesswork. Goal: make the subscription feel warm, crafted, and easy to start. Required text: Ember Route; Better mornings, delivered; Fresh-roasted coffee subscription; First bag 50% off. Logo: a winding route line forming steam above a coffee cup. Visual style: rich editorial food photography, beans, kraft bag packaging, morning light, deep green, cream, espresso brown, and copper. Composition: show packaging, brewed coffee, and beans as the hero with a clear offer badge."
+    },
+    {
+      "key": "home_security",
+      "prompt": "Company: LumaGuard. Product: LumaGuard Cam, a wire-free smart home security camera. Audience: homeowners and renters who want simple, privacy-conscious security. Goal: communicate safety, clarity, and easy setup. Required text: LumaGuard; See what matters; Wire-free smart security; Set up in 10 minutes. Logo: a shield outline made from a camera aperture, clean and modern. Visual style: consumer electronics ad with crisp product shot, home entryway scene, app notification UI, white, slate, sky blue, and signal green. Composition: make the camera and phone alert interface the main visual, with a reassuring but not alarmist tone."
+    },
+    {
+      "key": "online_course",
+      "prompt": "Company: SkillForge. Product: SkillForge Data Analyst Bootcamp, an online career course. Audience: early-career professionals switching into data roles. Goal: make the course feel credible, practical, and outcome-focused. Required text: SkillForge; Become job-ready in 12 weeks; Data Analyst Bootcamp; Enroll by July 15. Logo: a small anvil shape combined with a bar chart. Visual style: education technology ad, clean learning dashboard, charts, mentor video tile, confident typography, indigo, white, amber, and charcoal. Composition: show a laptop course interface with progress, charts, and a mentor session; make the deadline and outcome text easy to read."
+    },
+    {
+      "key": "laundry_detergent",
+      "prompt": "Company: BrightKind. Product: BrightKind Laundry Sheets, plastic-free laundry detergent sheets. Audience: households that want a convenient lower-waste cleaning product. Goal: make the product feel fresh, effective, and simple. Required text: BrightKind; Clean clothes. Less waste.; Plastic-free laundry sheets; 40 loads per box. Logo: a folded leaf shape that also resembles a clean sheet of fabric. Visual style: bright CPG ad with folded laundry, product box, clean bubbles or freshness cues, white, leaf green, sky blue, and sunny yellow. Composition: show the box and laundry sheets clearly, include a strong benefit headline, and make the load count visible."
     }
   ],
   "adSizes": [

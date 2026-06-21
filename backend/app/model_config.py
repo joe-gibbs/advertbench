@@ -19,6 +19,9 @@ class AdvertAd(BaseModel):
     key: str
     prompt: str
 
+    def render_prompt(self) -> str:
+        return self.prompt
+
 
 class AdSize(BaseModel):
     key: str

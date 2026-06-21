@@ -56,7 +56,7 @@ def generate(ad_key: str | None) -> None:
                 raise RuntimeError(f"Unknown ad key '{ad_key}'. Available ads: {available}")
 
         for ad in ads:
-            run_id = asyncio.run(generate_run(ad.prompt))
+            run_id = asyncio.run(generate_run(ad.render_prompt()))
             print(f"generated {ad.key} run {run_id}")
     finally:
         close_pool()
