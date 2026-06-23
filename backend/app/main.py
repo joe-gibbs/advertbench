@@ -1,3 +1,4 @@
+from html import escape
 from typing import Annotated
 from uuid import uuid4
 
@@ -47,6 +48,33 @@ def shutdown() -> None:
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
+
+
+def _absolute_url(path: str) -> str:
+    base_url = get_settings().app_base_url.rstrip("/")
+    return f"{base_url}{path}"
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap() -> Response:
+    paths = ["/", "/leaderboard", "/about"]
+    urls = "\n".join(
+        f"  <url>\n    <loc>{escape(_absolute_url(path))}</loc>\n  </url>"
+        for path in paths
+    )
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}\n"
+        "</urlset>\n"
+    )
+    return Response(content=content, media_type="application/xml")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots() -> Response:
+    content = f"User-agent: *\nAllow: /\nSitemap: {_absolute_url('/sitemap.xml')}\n"
+    return Response(content=content, media_type="text/plain")
 
 
 def _template_response(request: Request, template: str, context: dict, identity: dict | None = None) -> Response:

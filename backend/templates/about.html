@@ -36,6 +36,31 @@
           the model names or scores until after they vote.
         </p>
       </article>
+
+      <article>
+        <h2>Add a model</h2>
+        <p>
+          To ask for a model to be added to the benchmark, email
+          <span id="modelContact" class="emailPlaceholder">contact address</span>.
+        </p>
+      </article>
     </section>
   </main>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const target = document.getElementById("modelContact");
+      if (!target) return;
+
+      const codes = [106, 111, 101, 64, 106, 103, 105, 98, 98, 115, 46, 100, 101, 118];
+      const address = String.fromCharCode(...codes);
+      const link = document.createElement("a");
+      link.href = `mailto:${address}?subject=${encodeURIComponent("AdvertBench model request")}`;
+      link.textContent = address;
+      link.setAttribute("aria-label", "Email Joe Gibbs about adding a model to AdvertBench");
+      target.replaceChildren(link);
+    })();
+  </script>
 {% endblock %}

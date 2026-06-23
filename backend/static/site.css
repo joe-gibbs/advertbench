@@ -429,6 +429,17 @@ td small { margin-top: 4px; }
   margin-bottom: 8px;
 }
 
+.emailPlaceholder {
+  color: var(--ink);
+  font-weight: 750;
+}
+
+.emailPlaceholder a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .formPanel form { display: grid; gap: 16px; }
 label { display: grid; gap: 7px; color: var(--ink); font-weight: 750; }
 textarea, input {

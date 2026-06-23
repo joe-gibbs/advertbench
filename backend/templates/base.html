@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}AdvertBench{% endblock %}</title>
     <meta name="description" content="Rank AI-generated image ad sets with Elo voting.">
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/static/site.css?v=20260621-2">
   </head>
   <body>
@@ -27,5 +28,6 @@
       created by <a href="https://jgibbs.dev" target="_blank" rel="noreferrer">Joe Gibbs</a>
       · <a href="https://github.com/joe-gibbs/advertbench" target="_blank" rel="noreferrer">GitHub</a>
     </footer>
+    {% block scripts %}{% endblock %}
   </body>
 </html>
